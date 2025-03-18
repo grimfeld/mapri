@@ -1,0 +1,66 @@
+/* Global styles for the app */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Fix for Leaflet marker icon */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Ensure map container takes full height */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Make popups prettier */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+}
+
+/* Fix close button positioning and style */
+.leaflet-popup-close-button {
+  position: absolute;
+  top: 10px !important;
+  right: 5px !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 16px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaflet-popup-close-button span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 15px;
+}
+
+/* Animation for the place form */
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
