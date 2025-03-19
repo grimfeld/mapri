@@ -64,12 +64,14 @@ You can deploy the contents of the `dist` directory to any static hosting servic
 ## How to Use
 
 1. **Adding Places**:
+
    - Click on the "+" button in the bottom right corner
    - Click on the map to select a location
    - Fill out the place details (name, description, type)
    - Click "Add Place" to save
 
 2. **User Profile**:
+
    - Click on the user icon in the bottom right corner
    - Set your display name
    - View your assigned color

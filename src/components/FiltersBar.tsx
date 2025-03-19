@@ -36,6 +36,7 @@ import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
+import { showInfoToast } from "@/utils/toast";
 
 export default function FiltersBar() {
   const availableTags = useStore($availableTags);
@@ -52,25 +53,59 @@ export default function FiltersBar() {
 
     if (value === "all") {
       setTypeFilter("");
+      showInfoToast("Filtre par type supprimé");
     } else {
       setTypeFilter(value);
+      showInfoToast(
+        `Filtre appliqué: ${
+          placeTypeLabels[value as keyof typeof placeTypeLabels]
+        }`
+      );
     }
   };
 
   const handleTagClick = (tag: string) => {
     toggleTagFilter(tag);
+
+    // Check if the tag was added or removed
+    const tagExists = selectedTags.includes(tag);
+    if (tagExists) {
+      showInfoToast(`Tag "${tag}" supprimé`);
+    } else {
+      showInfoToast(`Tag "${tag}" ajouté`);
+    }
   };
 
   const handleShowOpenChange = (checked: boolean) => {
     setShowOpenOnly(checked);
+    if (checked) {
+      showInfoToast("Affichage des lieux ouverts uniquement");
+    } else {
+      showInfoToast("Affichage de tous les lieux");
+    }
   };
 
   const handleSortByDistanceChange = (checked: boolean) => {
     setSortByDistance(checked);
+    if (checked) {
+      showInfoToast("Tri par distance activé");
+    } else {
+      showInfoToast("Tri par distance désactivé");
+    }
   };
 
   const handlePriceRangeChange = (value: string) => {
     setPriceRangeFilter(value === "all" ? null : value);
+    if (value === "all") {
+      showInfoToast("Filtre de prix supprimé");
+    } else {
+      showInfoToast(`Filtre de prix appliqué: ${value}`);
+    }
+  };
+
+  const handleClearTags = () => {
+    clearTagFilters();
+    showInfoToast("Tous les tags ont été supprimés");
   };
 
   const showTags = typeFilter !== "" && availableTags.length > 0;
@@ -182,7 +217,7 @@ export default function FiltersBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearTagFilters}
+                onClick={handleClearTags}
                 className="h-7 px-2"
               >
                 <X className="h-3 w-3 mr-1" />

@@ -1,11 +1,8 @@
 import { atom } from "nanostores";
 import { getRandomAvatarUrl } from "@/utils/avatars";
 import * as db from "@/lib/db";
-
-export interface User {
-  username: string;
-  avatarUrl: string;
-}
+import { showSuccessToast, showErrorToast } from "@/utils/toast";
+import { User } from "@/types";
 
 // Local storage keys
 const USER_STORAGE_KEY = "mapri_user";
@@ -14,6 +11,7 @@ const USER_STORAGE_KEY = "mapri_user";
 const DEFAULT_USER: User = {
   username: "",
   avatarUrl: getRandomAvatarUrl(),
+  profilePhoto: undefined,
 };
 
 // Load user from localStorage if exists
@@ -47,11 +45,26 @@ export const updateUser = async (user: User) => {
   // Save to database if username is set
   if (user.username) {
     try {
-      await db.saveUser(user.username, user.avatarUrl);
+      await db.saveUser(user.username, user.avatarUrl, user.profilePhoto);
+      showSuccessToast(`Profil "${user.username}" mis à jour avec succès`);
     } catch (error) {
       console.error("Error saving user to database:", error);
+      showErrorToast("Échec de la mise à jour du profil");
     }
   }
+};
+
+// Update user profile photo
+export const updateProfilePhoto = async (profilePhotoUrl: string) => {
+  const currentUser = $currentUser.get();
+
+  // Update with new profile photo
+  const updatedUser: User = {
+    ...currentUser,
+    profilePhoto: profilePhotoUrl,
+  };
+
+  await updateUser(updatedUser);
 };
 
 // Check if user has set a username

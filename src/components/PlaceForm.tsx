@@ -12,7 +12,6 @@ import {
 } from "./ui/select";
 import { Save, MapPin, X, Plus } from "lucide-react";
 import { DialogTitle, DialogHeader, DialogFooter } from "./ui/dialog";
-import { cn } from "@/lib/utils";
 import { useStore } from "@nanostores/react";
 import {
   $selectedLocation,
@@ -35,6 +34,7 @@ import { Label } from "./ui/label";
 import { generateRandomId } from "@/utils/helpers";
 import { Badge } from "./ui/badge";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { showErrorToast } from "@/utils/toast";
 
 const formSchema = z.object({
   name: z.string().min(1),
@@ -52,6 +52,7 @@ export default function PlaceForm({ onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [newTag, setNewTag] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedLocation = useStore($selectedLocation);
   const currentUser = useStore($currentUser);
 
@@ -68,13 +69,19 @@ export default function PlaceForm({ onClose }: Props) {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
+      setIsSubmitting(true);
+
       if (!selectedLocation) {
         setError("Veuillez sélectionner une adresse");
+        showErrorToast("Veuillez sélectionner une adresse");
         return;
       }
 
       if (!currentUser.username) {
         setError(
+          "Veuillez définir votre nom d'utilisateur avant d'ajouter un lieu"
+        );
+        showErrorToast(
           "Veuillez définir votre nom d'utilisateur avant d'ajouter un lieu"
         );
         return;
@@ -102,6 +109,9 @@ export default function PlaceForm({ onClose }: Props) {
     } catch (error) {
       console.error("Error submitting form:", error);
       setError("Une erreur est survenue lors de l'ajout du lieu");
+      showErrorToast("Une erreur est survenue lors de l'ajout du lieu");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -373,24 +383,23 @@ export default function PlaceForm({ onClose }: Props) {
             />
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="mr-2"
-            >
-              Annuler
-            </Button>
+          <DialogFooter className="flex gap-2 pt-2">
             <Button
               type="submit"
-              className={cn("gap-1", {
-                "opacity-50 pointer-events-none": !selectedLocation,
-              })}
-              disabled={!selectedLocation}
+              disabled={isSubmitting}
+              className="w-full flex gap-2 items-center"
             >
-              <Save className="h-4 w-4" />
-              Enregistrer
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>En cours...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>Enregistrer</span>
+                </>
+              )}
             </Button>
           </DialogFooter>
         </form>

@@ -10,9 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { User, fetchExistingUsers, updateUser } from "@/store/user.store";
+import { fetchExistingUsers, updateUser } from "@/store/user.store";
 import { avatarOptions } from "@/utils/avatars";
 import { User as UserIcon, PlusCircle } from "lucide-react";
+import { showSuccessToast, showErrorToast } from "@/utils/toast";
+import { ImageUploader } from "./ui/image-uploader";
+import { uploadProfileImage } from "@/lib/firebase";
+import { User } from "@/types";
 
 interface ProfileSelectionDialogProps {
   open: boolean;
@@ -28,6 +32,10 @@ export default function ProfileSelectionDialog({
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState("");
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(avatarOptions[0]);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | undefined>(
+    undefined
+  );
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Fetch existing users when dialog opens
   useEffect(() => {
@@ -49,19 +57,46 @@ export default function ProfileSelectionDialog({
   };
 
   const handleSelectUser = async (user: User) => {
-    await updateUser(user);
-    onOpenChange(false);
+    try {
+      await updateUser(user);
+      showSuccessToast(`Profil "${user.username}" sélectionné`);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error selecting user:", error);
+      showErrorToast("Échec de la sélection du profil");
+    }
   };
 
   const handleCreateProfile = async () => {
     if (!username.trim()) return;
 
-    await updateUser({
-      username: username.trim(),
-      avatarUrl: selectedAvatarUrl,
-    });
+    try {
+      await updateUser({
+        username: username.trim(),
+        avatarUrl: selectedAvatarUrl,
+        profilePhoto: profilePhotoUrl,
+      });
+      showSuccessToast(`Profil "${username.trim()}" créé avec succès`);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error creating profile:", error);
+      showErrorToast("Échec de la création du profil");
+    }
+  };
 
-    onOpenChange(false);
+  const handleProfilePhotoUpload = async (file: File) => {
+    try {
+      setUploadingPhoto(true);
+      const photoUrl = await uploadProfileImage(file);
+      setProfilePhotoUrl(photoUrl);
+      return photoUrl;
+    } catch (error) {
+      console.error("Error uploading profile photo:", error);
+      showErrorToast("Échec du téléchargement de la photo de profil");
+      throw error;
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   // Get initials from username for avatar fallback
@@ -113,7 +148,10 @@ export default function ProfileSelectionDialog({
                     onClick={() => handleSelectUser(user)}
                   >
                     <Avatar className="h-16 w-16">
-                      <AvatarImage src={user.avatarUrl} alt={user.username} />
+                      <AvatarImage
+                        src={user.profilePhoto || user.avatarUrl}
+                        alt={user.username}
+                      />
                       <AvatarFallback>
                         {getInitials(user.username)}
                       </AvatarFallback>
@@ -138,9 +176,22 @@ export default function ProfileSelectionDialog({
               />
             </div>
 
+            {/* Profile Photo Upload */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Sélectionnez un avatar
+                Photo de profil (optionnel)
+              </label>
+              <ImageUploader
+                onImageUpload={handleProfilePhotoUpload}
+                previewUrl={profilePhotoUrl}
+                className="max-w-xs mx-auto"
+                buttonText="Ajouter une photo de profil"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Ou sélectionnez un avatar
               </label>
               <div className="grid grid-cols-5 gap-2">
                 {avatarOptions.map((avatarUrl, index) => (
@@ -165,10 +216,17 @@ export default function ProfileSelectionDialog({
             <div className="flex justify-end">
               <Button
                 onClick={handleCreateProfile}
-                disabled={!username.trim()}
+                disabled={!username.trim() || uploadingPhoto}
                 className="mt-2"
               >
-                Créer profil
+                {uploadingPhoto ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <span>En cours...</span>
+                  </>
+                ) : (
+                  "Créer profil"
+                )}
               </Button>
             </div>
           </TabsContent>

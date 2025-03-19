@@ -3,6 +3,7 @@ import { atom, computed } from "nanostores";
 import * as db from "@/lib/db";
 import { Comment } from "@/types";
 import { generateRandomId, calculateDistance } from "@/utils/helpers";
+import { showSuccessToast, showErrorToast } from "@/utils/toast";
 
 /**
  * Error
@@ -73,12 +74,15 @@ export const addLocation = async (data: Omit<Place, "id">) => {
 
     if (success) {
       loadLocations();
+      showSuccessToast(`Le lieu "${data.name}" a été ajouté avec succès`);
     } else {
       $error.set("Failed to add location to database");
+      showErrorToast("Échec de l'ajout du lieu dans la base de données");
     }
   } catch (err) {
     console.error("Error adding location:", err);
     $error.set("Failed to add location");
+    showErrorToast("Échec de l'ajout du lieu");
   } finally {
     $isLoading.set(false);
   }
@@ -92,6 +96,7 @@ export const updateLocation = async (data: Partial<Place>) => {
 
     if (!currentLocation) {
       $error.set("No location selected");
+      showErrorToast("Aucun lieu sélectionné");
       return;
     }
 
@@ -102,6 +107,7 @@ export const updateLocation = async (data: Partial<Place>) => {
 
     if (!existingPlace) {
       $error.set("Place not found");
+      showErrorToast("Lieu non trouvé");
       return;
     }
 
@@ -116,12 +122,17 @@ export const updateLocation = async (data: Partial<Place>) => {
 
     if (success) {
       loadLocations();
+      showSuccessToast(
+        `Le lieu "${updatedPlace.name}" a été mis à jour avec succès`
+      );
     } else {
       $error.set("Failed to update location in database");
+      showErrorToast("Échec de la mise à jour du lieu dans la base de données");
     }
   } catch (err) {
     console.error("Error updating location:", err);
     $error.set("Failed to update location");
+    showErrorToast("Échec de la mise à jour du lieu");
   } finally {
     $isLoading.set(false);
   }
@@ -136,6 +147,7 @@ export const deleteLocation = async () => {
 
     if (!currentLocation) {
       $error.set("No location selected");
+      showErrorToast("Aucun lieu sélectionné");
       return;
     }
 
@@ -144,12 +156,17 @@ export const deleteLocation = async () => {
 
     if (success) {
       loadLocations();
+      showSuccessToast(
+        `Le lieu "${currentLocation.name}" a été supprimé avec succès`
+      );
     } else {
       $error.set("Failed to delete location from database");
+      showErrorToast("Échec de la suppression du lieu de la base de données");
     }
   } catch (err) {
     console.error("Error deleting location:", err);
     $error.set("Failed to delete location");
+    showErrorToast("Échec de la suppression du lieu");
   } finally {
     $isLoading.set(false);
   }
@@ -263,11 +280,11 @@ export const $availableTags = computed(
  */
 export const $userLocation = atom<{ lat: number; lng: number } | null>(null);
 
-$userLocation.listen((location) => {
-  if (location) {
-    console.log("User location:", location);
-  }
-});
+// $userLocation.listen((location) => {
+//   if (location) {
+//     console.log("User location:", location);
+//   }
+// });
 
 export const setUserLocation = (
   location: { lat: number; lng: number } | null
@@ -434,46 +451,106 @@ export const addComment = async (data: {
   content: string;
 }) => {
   try {
-    $isLoading.set(true);
-    $error.set(null);
-
-    const comment = {
+    const comment: Comment = {
       id: generateRandomId(),
       ...data,
+      createdAt: new Date().toISOString(),
     };
 
-    // Add to database
     const success = await db.addComment(comment);
 
     if (success) {
-      await loadComments(data.locationId);
+      loadComments(data.locationId);
+      showSuccessToast("Votre commentaire a été ajouté avec succès");
+      return comment;
     } else {
-      $error.set("Failed to add comment to database");
+      showErrorToast("Échec de l'ajout du commentaire");
+      return null;
     }
   } catch (err) {
     console.error("Error adding comment:", err);
-    $error.set("Failed to add comment");
-  } finally {
-    $isLoading.set(false);
+    showErrorToast("Échec de l'ajout du commentaire");
+    return null;
   }
 };
 
 export const deleteComment = async (commentId: string, locationId: string) => {
   try {
-    $isLoading.set(true);
-    $error.set(null);
-
-    // Delete from database
     const success = await db.deleteComment(commentId);
 
     if (success) {
-      await loadComments(locationId);
+      loadComments(locationId);
+      showSuccessToast("Le commentaire a été supprimé avec succès");
+      return true;
     } else {
-      $error.set("Failed to delete comment from database");
+      showErrorToast("Échec de la suppression du commentaire");
+      return false;
     }
   } catch (err) {
     console.error("Error deleting comment:", err);
-    $error.set("Failed to delete comment");
+    showErrorToast("Échec de la suppression du commentaire");
+    return false;
+  }
+};
+
+/**
+ * Add a photo to an existing location
+ */
+export const addLocationPhoto = async (
+  locationId: string,
+  photoUrl: string
+) => {
+  try {
+    $isLoading.set(true);
+    $error.set(null);
+
+    // Get the current location
+    const locations = $locations.get();
+    const location = locations.find((place) => place.id === locationId);
+
+    if (!location) {
+      $error.set("Location not found");
+      showErrorToast("Lieu non trouvé");
+      return false;
+    }
+
+    // Create updated photos array
+    const updatedPhotos = location.photos
+      ? [...location.photos, photoUrl]
+      : [photoUrl];
+
+    // Update the location with the new photo
+    const updatedLocation = {
+      ...location,
+      photos: updatedPhotos,
+    };
+
+    // Update in database
+    const success = await db.updatePlace(updatedLocation);
+
+    if (success) {
+      // Update current location if it's the one we're viewing
+      const currentLocation = $currentLocation.get();
+      if (currentLocation && currentLocation.id === locationId) {
+        $currentLocation.set({
+          ...currentLocation,
+          photos: updatedPhotos,
+        });
+      }
+
+      // Reload all locations
+      await loadLocations();
+      return true;
+    } else {
+      $error.set("Failed to add photo to location");
+      showErrorToast("Échec de l'ajout de la photo au lieu");
+      return false;
+    }
+  } catch (err) {
+    console.error("Error adding photo to location:", err);
+    $error.set("Failed to add photo to location");
+    showErrorToast("Échec de l'ajout de la photo au lieu");
+    return false;
   } finally {
     $isLoading.set(false);
   }

@@ -20,7 +20,8 @@ export async function initializeDatabase() {
         closing_time TEXT,
         price_range TEXT,
         username TEXT,
-        avatar_url TEXT
+        avatar_url TEXT,
+        photos TEXT[]
       )
     `;
 
@@ -48,7 +49,8 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         username TEXT PRIMARY KEY,
         avatar_url TEXT NOT NULL,
-        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        profile_photo TEXT
       )
     `;
 
@@ -92,6 +94,7 @@ export async function getPlaces(): Promise<Place[]> {
         username: place.username as string | undefined,
         avatarUrl: place.avatar_url as string | undefined,
         tags: tags,
+        photos: place.photos as string[] | undefined,
       });
     }
 
@@ -105,8 +108,8 @@ export async function getPlaces(): Promise<Place[]> {
 export async function addPlace(place: Place) {
   try {
     await sql`
-      INSERT INTO places (id, name, type, lat, lng, address, opening_time, closing_time, price_range, username, avatar_url)
-      VALUES (${place.id}, ${place.name}, ${place.type}, ${place.lat}, ${place.lng}, ${place.address}, ${place.openingTime}, ${place.closingTime}, ${place.priceRange}, ${place.username}, ${place.avatarUrl})
+      INSERT INTO places (id, name, type, lat, lng, address, opening_time, closing_time, price_range, username, avatar_url, photos)
+      VALUES (${place.id}, ${place.name}, ${place.type}, ${place.lat}, ${place.lng}, ${place.address}, ${place.openingTime}, ${place.closingTime}, ${place.priceRange}, ${place.username}, ${place.avatarUrl}, ${place.photos})
     `;
 
     // Add tags if they exist
@@ -136,7 +139,8 @@ export async function updatePlace(place: Place) {
           closing_time = ${place.closingTime},
           price_range = ${place.priceRange},
           username = ${place.username},
-          avatar_url = ${place.avatarUrl}
+          avatar_url = ${place.avatarUrl},
+          photos = ${place.photos}
       WHERE id = ${place.id}
     `;
 
@@ -248,10 +252,11 @@ export async function removeAllTagsFromLocation(locationId: string) {
 // User functions
 export async function getUsers() {
   try {
-    const users = await sql`SELECT * FROM users ORDER BY last_active DESC`;
-    return users.map((user) => ({
-      username: user.username,
-      avatarUrl: user.avatar_url,
+    const users = await sql`SELECT * FROM users`;
+    return users.map((user: Record<string, unknown>) => ({
+      username: user.username as string,
+      avatarUrl: user.avatar_url as string,
+      profilePhoto: user.profile_photo as string | undefined,
     }));
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -259,15 +264,19 @@ export async function getUsers() {
   }
 }
 
-export async function saveUser(username: string, avatarUrl: string) {
+export async function saveUser(
+  username: string,
+  avatarUrl: string,
+  profilePhoto?: string
+) {
   try {
-    // Upsert: insert if doesn't exist, update if exists
     await sql`
-      INSERT INTO users (username, avatar_url, last_active) 
-      VALUES (${username}, ${avatarUrl}, CURRENT_TIMESTAMP)
+      INSERT INTO users (username, avatar_url, profile_photo)
+      VALUES (${username}, ${avatarUrl}, ${profilePhoto})
       ON CONFLICT (username) 
       DO UPDATE SET 
         avatar_url = ${avatarUrl},
+        profile_photo = COALESCE(${profilePhoto}, users.profile_photo),
         last_active = CURRENT_TIMESTAMP
     `;
     return true;

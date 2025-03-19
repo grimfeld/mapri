@@ -55,9 +55,16 @@ export interface Place {
   priceRange?: PriceRange;
   username?: string;
   avatarUrl?: string;
+  photos?: string[];
 }
 
 export interface MapState {
   center: [number, number];
   zoom: number;
+}
+
+export interface User {
+  username: string;
+  avatarUrl: string;
+  profilePhoto?: string;
 }

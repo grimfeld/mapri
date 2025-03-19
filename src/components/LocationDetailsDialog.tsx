@@ -14,6 +14,7 @@ import {
   addComment,
   loadComments,
   deleteComment,
+  addLocationPhoto,
 } from "@/store/locations.store";
 import { $currentUser } from "@/store/user.store";
 import { Button } from "./ui/button";
@@ -30,12 +31,17 @@ import {
   Trash2,
   MessageSquare,
   User,
+  ImagePlus,
 } from "lucide-react";
 import { calculateDistance, formatDistance } from "@/utils/helpers";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
+import { showSuccessToast, showErrorToast } from "@/utils/toast";
+import LocationPhotos from "./LocationPhotos";
+import { ImageUploader } from "./ui/image-uploader";
+import { uploadLocationImage } from "@/lib/firebase";
 
 // Helper function to format datetime relative to current time
 function formatDateTimeRelative(dateTimeString: string): string {
@@ -89,6 +95,8 @@ export default function LocationDetailsDialog({
   const userLocation = useStore($userLocation);
   const currentUser = useStore($currentUser);
   const [newComment, setNewComment] = useState("");
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     // Load the comments when the location changes
@@ -98,28 +106,65 @@ export default function LocationDetailsDialog({
   }, [location]);
 
   const handleSubmitComment = async () => {
-    if (!location || !newComment.trim() || !currentUser.username) return;
+    if (!location || !newComment.trim() || !currentUser.username) {
+      if (!currentUser.username) {
+        showErrorToast("Vous devez avoir un profil pour commenter");
+      } else if (!newComment.trim()) {
+        showErrorToast("Le commentaire ne peut pas être vide");
+      }
+      return;
+    }
 
-    await addComment({
+    const result = await addComment({
       locationId: location.id,
       username: currentUser.username,
       avatarUrl: currentUser.avatarUrl,
       content: newComment.trim(),
     });
 
-    setNewComment("");
+    if (result) {
+      showSuccessToast("Commentaire ajouté avec succès");
+      setNewComment("");
+    }
   };
 
   const handleDeleteComment = async (commentId: string) => {
     if (!location) return;
-    await deleteComment(commentId, location.id);
+
+    const success = await deleteComment(commentId, location.id);
+    if (success) {
+      showSuccessToast("Commentaire supprimé avec succès");
+    } else {
+      showErrorToast("Échec de la suppression du commentaire");
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!location) return;
+
+    try {
+      setIsUploading(true);
+      const photoUrl = await uploadLocationImage(file);
+      await addLocationPhoto(location.id, photoUrl);
+      showSuccessToast("Photo ajoutée avec succès");
+      setShowPhotoUpload(false);
+      return photoUrl;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      showErrorToast("Échec du téléchargement de l'image");
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (!location) return null;
 
+  const maxPhotos = location.photos ? location.photos.length >= 3 : false;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">{location.name}</DialogTitle>
           <div className="flex items-center mt-1">
@@ -135,10 +180,101 @@ export default function LocationDetailsDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Location photos */}
+          <div>
+            {location.photos && location.photos.length > 0 ? (
+              <div className="space-y-2">
+                <LocationPhotos photos={location.photos} />
+                {!maxPhotos && currentUser.username && (
+                  <>
+                    {showPhotoUpload ? (
+                      <div className="mt-4">
+                        <ImageUploader
+                          onImageUpload={handleImageUpload}
+                          buttonText="Ajouter une photo"
+                          className="max-w-full mx-auto"
+                        />
+                        {isUploading ? (
+                          <div className="flex items-center justify-center mt-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 mr-2"></div>
+                            <span className="text-sm">
+                              Téléchargement en cours...
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end mt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowPhotoUpload(false)}
+                            >
+                              Annuler
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs flex items-center gap-1"
+                          onClick={() => setShowPhotoUpload(true)}
+                        >
+                          <ImagePlus className="h-3 w-3" />
+                          Ajouter une photo
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : currentUser.username ? (
+              showPhotoUpload ? (
+                <div className="mb-4">
+                  <ImageUploader
+                    onImageUpload={handleImageUpload}
+                    buttonText="Ajouter une photo"
+                    className="max-w-full mx-auto"
+                  />
+                  {isUploading ? (
+                    <div className="flex items-center justify-center mt-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 mr-2"></div>
+                      <span className="text-sm">
+                        Téléchargement en cours...
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-end mt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPhotoUpload(false)}
+                      >
+                        Annuler
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPhotoUpload(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                    Ajouter la première photo
+                  </Button>
+                </div>
+              )
+            ) : null}
+          </div>
+
           {/* Location details */}
           <div className="space-y-2">
             <div className="flex items-center text-sm text-gray-500">
-              <MapPin className="h-4 w-4 mr-2" />
+              <MapPin className="h-4 min-w-4 mr-2 " />
               <span>{location.address}</span>
             </div>
 
@@ -243,7 +379,7 @@ export default function LocationDetailsDialog({
                 <div className="flex gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={currentUser.avatarUrl}
+                      src={currentUser.profilePhoto || currentUser.avatarUrl}
                       alt={currentUser.username}
                     />
                     <AvatarFallback>

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useStore } from "@nanostores/react";
-import { $currentUser, updateUser } from "@/store/user.store";
+import {
+  $currentUser,
+  updateUser,
+  updateProfilePhoto,
+} from "@/store/user.store";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -18,6 +22,8 @@ import { generateProfileCode, parseProfileCode } from "@/utils/profile";
 import { Copy, Import, SwitchCamera } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import ProfileSelectionDialog from "./ProfileSelectionDialog";
+import { ImageUploader } from "./ui/image-uploader";
+import { uploadProfileImage } from "@/lib/firebase";
 
 export default function UserProfile() {
   const currentUser = useStore($currentUser);
@@ -26,16 +32,21 @@ export default function UserProfile() {
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(
     currentUser.avatarUrl
   );
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | undefined>(
+    currentUser.profilePhoto
+  );
   const [importCode, setImportCode] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [copySuccess, setCopySuccess] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleSave = async () => {
     await updateUser({
       username,
       avatarUrl: selectedAvatarUrl,
+      profilePhoto: profilePhotoUrl,
     });
     setIsOpen(false);
   };
@@ -47,6 +58,7 @@ export default function UserProfile() {
       await updateUser(user);
       setUsername(user.username);
       setSelectedAvatarUrl(user.avatarUrl);
+      setProfilePhotoUrl(user.profilePhoto);
       setActiveTab("profile");
       setImportCode("");
     } else {
@@ -66,6 +78,20 @@ export default function UserProfile() {
     setShowProfileDialog(true);
   };
 
+  const handleProfilePhotoUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+      const photoUrl = await uploadProfileImage(file);
+      setProfilePhotoUrl(photoUrl);
+      return photoUrl;
+    } catch (error) {
+      console.error("Error uploading profile photo:", error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Get initials from username for avatar fallback
   const getInitials = () => {
     if (!currentUser.username) return "?";
@@ -82,7 +108,7 @@ export default function UserProfile() {
           >
             <Avatar className="h-8 w-8 cursor-pointer">
               <AvatarImage
-                src={currentUser.avatarUrl}
+                src={currentUser.profilePhoto || currentUser.avatarUrl}
                 alt={currentUser.username || "User"}
               />
               <AvatarFallback>{getInitials()}</AvatarFallback>
@@ -119,9 +145,23 @@ export default function UserProfile() {
                   placeholder="Entrez votre nom d'utilisateur"
                 />
               </div>
+
+              {/* Profile Photo Upload */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Sélectionnez un avatar
+                  Photo de profil (optionnel)
+                </label>
+                <ImageUploader
+                  onImageUpload={handleProfilePhotoUpload}
+                  previewUrl={profilePhotoUrl}
+                  className="max-w-xs mx-auto"
+                  buttonText="Ajouter/modifier photo de profil"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Ou sélectionnez un avatar
                 </label>
                 <div className="grid grid-cols-5 gap-2">
                   {avatarOptions.map((avatarUrl, index) => (
@@ -155,9 +195,16 @@ export default function UserProfile() {
                 <Button
                   type="button"
                   onClick={handleSave}
-                  disabled={!username.trim()}
+                  disabled={!username.trim() || isUploading}
                 >
-                  Enregistrer
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <span>En cours...</span>
+                    </>
+                  ) : (
+                    "Enregistrer"
+                  )}
                 </Button>
               </DialogFooter>
             </TabsContent>
