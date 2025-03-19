@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { useStore } from "@nanostores/react";
-import {
-  $currentUser,
-  updateUser,
-  updateProfilePhoto,
-} from "@/store/user.store";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { $currentUser, updateUser } from "@/store/user.store";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {

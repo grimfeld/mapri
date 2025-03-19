@@ -1,4 +1,4 @@
-import { User } from "@/store/user.store";
+import { User } from "@/types";
 
 // Function to generate a shareable code from user profile
 export function generateProfileCode(user: User): string {
