@@ -52,6 +52,19 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create the comments table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        location_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        avatar_url TEXT,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (location_id) REFERENCES places(id) ON DELETE CASCADE
+      )
+    `;
+
     console.log("Database initialized successfully");
   } catch (error) {
     console.error("Error initializing database:", error);
@@ -260,6 +273,57 @@ export async function saveUser(username: string, avatarUrl: string) {
     return true;
   } catch (error) {
     console.error("Error saving user:", error);
+    return false;
+  }
+}
+
+// Comment functions
+export async function getCommentsByLocationId(locationId: string) {
+  try {
+    const comments = await sql`
+      SELECT * FROM comments
+      WHERE location_id = ${locationId}
+      ORDER BY created_at DESC
+    `;
+    return comments.map((comment) => ({
+      id: comment.id,
+      locationId: comment.location_id,
+      username: comment.username,
+      avatarUrl: comment.avatar_url,
+      content: comment.content,
+      createdAt: comment.created_at,
+    }));
+  } catch (error) {
+    console.error(`Error fetching comments for location ${locationId}:`, error);
+    return [];
+  }
+}
+
+export async function addComment(comment: {
+  id: string;
+  locationId: string;
+  username: string;
+  avatarUrl?: string;
+  content: string;
+}) {
+  try {
+    await sql`
+      INSERT INTO comments (id, location_id, username, avatar_url, content)
+      VALUES (${comment.id}, ${comment.locationId}, ${comment.username}, ${comment.avatarUrl}, ${comment.content})
+    `;
+    return true;
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    return false;
+  }
+}
+
+export async function deleteComment(id: string) {
+  try {
+    await sql`DELETE FROM comments WHERE id = ${id}`;
+    return true;
+  } catch (error) {
+    console.error(`Error deleting comment ${id}:`, error);
     return false;
   }
 }

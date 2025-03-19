@@ -1,6 +1,13 @@
 import { useStore } from "@nanostores/react";
 import { Button } from "./ui/button";
-import { Edit, MapPin, Tag, Navigation, CircleDollarSign } from "lucide-react";
+import {
+  Edit,
+  Eye,
+  MapPin,
+  Tag,
+  Navigation,
+  CircleDollarSign,
+} from "lucide-react";
 import { placeTypeColors, placeTypeLabels } from "../types";
 import {
   $filteredLocations,
@@ -14,15 +21,17 @@ import { useState } from "react";
 import { calculateDistance, formatDistance } from "@/utils/helpers";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import LocationDetailsDialog from "./LocationDetailsDialog";
 
 export default function ListView() {
   const places = useStore($filteredLocations);
   const userLocation = useStore($userLocation);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   return (
     <ScrollArea className="h-full">
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         {places.length === 0 ? (
           <div className="text-center py-10">
             <MapPin className="h-12 w-12 mx-auto text-gray-300 mb-4" />
@@ -52,7 +61,10 @@ export default function ListView() {
               <div
                 key={place.id}
                 className="border rounded-md p-4 hover:bg-gray-50 transition-colors cursor-pointer bg-white shadow-sm"
-                onClick={() => setCurrentLocation(place)}
+                onClick={() => {
+                  setCurrentLocation(place);
+                  setIsDetailsOpen(true);
+                }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -147,7 +159,7 @@ export default function ListView() {
                     )}
                   </div>
 
-                  <DialogTrigger asChild>
+                  <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -155,18 +167,38 @@ export default function ListView() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setCurrentLocation(place);
+                        setIsDetailsOpen(true);
                       }}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Eye className="h-4 w-4" />
                     </Button>
-                  </DialogTrigger>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentLocation(place);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-        <PlaceEditForm onClose={() => setIsOpen(false)} />
+        <PlaceEditForm onClose={() => setIsEditOpen(false)} />
       </Dialog>
+
+      {/* Location details dialog */}
+      <LocationDetailsDialog
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+      />
     </ScrollArea>
   );
 }

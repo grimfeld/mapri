@@ -33,6 +33,15 @@ export interface Tag {
   name: string;
 }
 
+export interface Comment {
+  id: string;
+  locationId: string;
+  username: string;
+  avatarUrl?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Place {
   id: string;
   name: string;

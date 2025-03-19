@@ -28,6 +28,8 @@ import {
 } from "@/store/locations.store";
 import { Badge } from "./ui/badge";
 import { calculateDistance, formatDistance } from "@/utils/helpers";
+import LocationDetailsDialog from "./LocationDetailsDialog";
+import { Button } from "./ui/button";
 
 // Add CSS styles for custom markers
 const markerStyles = `
@@ -295,6 +297,7 @@ function LocationButton() {
 export default function MapView() {
   const locations = useStore($filteredLocations);
   const userLocation = useStore($userLocation);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   return (
     <div className="h-full grow flex flex-col relative">
@@ -324,7 +327,10 @@ export default function MapView() {
               position={[place.lat, place.lng]}
               icon={placeIcons[place.type]}
               eventHandlers={{
-                click: () => setCurrentLocation(place),
+                click: () => {
+                  setCurrentLocation(place);
+                  setIsDetailsOpen(true);
+                },
               }}
             >
               <Popup>
@@ -402,12 +408,31 @@ export default function MapView() {
                       </div>
                     </div>
                   )}
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentLocation(place);
+                        setIsDetailsOpen(true);
+                      }}
+                    >
+                      Voir détails
+                    </Button>
+                  </div>
                 </div>
               </Popup>
             </Marker>
           ))}
         </MapContainer>
       </div>
+
+      {/* Location details dialog */}
+      <LocationDetailsDialog
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+      />
     </div>
   );
 }

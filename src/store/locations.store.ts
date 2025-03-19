@@ -1,6 +1,7 @@
 import { Place } from "@/types";
 import { atom, computed } from "nanostores";
 import * as db from "@/lib/db";
+import { Comment } from "@/types";
 import { generateRandomId, calculateDistance } from "@/utils/helpers";
 
 /**
@@ -406,3 +407,74 @@ function isLocationCurrentlyOpen(location: Place): boolean {
     return currentTimeString >= openingTime || currentTimeString <= closingTime;
   }
 }
+
+/**
+ * Comments logic
+ */
+export const $locationComments = atom<Comment[]>([]);
+
+export const loadComments = async (locationId: string) => {
+  try {
+    $isLoading.set(true);
+    $error.set(null);
+    const comments = await db.getCommentsByLocationId(locationId);
+    $locationComments.set(comments);
+  } catch (err) {
+    console.error("Error loading comments:", err);
+    $error.set("Failed to load comments");
+  } finally {
+    $isLoading.set(false);
+  }
+};
+
+export const addComment = async (data: {
+  locationId: string;
+  username: string;
+  avatarUrl?: string;
+  content: string;
+}) => {
+  try {
+    $isLoading.set(true);
+    $error.set(null);
+
+    const comment = {
+      id: generateRandomId(),
+      ...data,
+    };
+
+    // Add to database
+    const success = await db.addComment(comment);
+
+    if (success) {
+      await loadComments(data.locationId);
+    } else {
+      $error.set("Failed to add comment to database");
+    }
+  } catch (err) {
+    console.error("Error adding comment:", err);
+    $error.set("Failed to add comment");
+  } finally {
+    $isLoading.set(false);
+  }
+};
+
+export const deleteComment = async (commentId: string, locationId: string) => {
+  try {
+    $isLoading.set(true);
+    $error.set(null);
+
+    // Delete from database
+    const success = await db.deleteComment(commentId);
+
+    if (success) {
+      await loadComments(locationId);
+    } else {
+      $error.set("Failed to delete comment from database");
+    }
+  } catch (err) {
+    console.error("Error deleting comment:", err);
+    $error.set("Failed to delete comment");
+  } finally {
+    $isLoading.set(false);
+  }
+};
