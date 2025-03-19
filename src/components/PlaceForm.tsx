@@ -33,10 +33,14 @@ import AddressSearch from "./AddressSearch";
 import { Label } from "./ui/label";
 import { generateRandomId } from "@/utils/helpers";
 import { Badge } from "./ui/badge";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 const formSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["restaurant", "bar", "cafe", "park", "attraction", "other"]),
+  openingTime: z.string().optional(),
+  closingTime: z.string().optional(),
+  priceRange: z.enum(["€", "€€", "€€€"]).optional(),
 });
 
 interface Props {
@@ -54,6 +58,9 @@ export default function PlaceForm({ onClose }: Props) {
     defaultValues: {
       name: "",
       type: "restaurant",
+      openingTime: "",
+      closingTime: "",
+      priceRange: undefined,
     },
   });
 
@@ -71,6 +78,9 @@ export default function PlaceForm({ onClose }: Props) {
         lng: selectedLocation.lng,
         address: selectedLocation.name,
         tags: tags,
+        openingTime: data.openingTime || undefined,
+        closingTime: data.closingTime || undefined,
+        priceRange: data.priceRange,
       });
 
       // Reset form
@@ -251,6 +261,106 @@ export default function PlaceForm({ onClose }: Props) {
           ) : (
             <AddressSearch />
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="openingTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel
+                    htmlFor="openingTime"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Heure d'ouverture
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      id="openingTime"
+                      type="time"
+                      placeholder="Heure d'ouverture"
+                      className="w-full"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="closingTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel
+                    htmlFor="closingTime"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Heure de fermeture
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      id="closingTime"
+                      type="time"
+                      placeholder="Heure de fermeture"
+                      className="w-full"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="priceRange"
+              render={({ field }) => (
+                <FormItem className="flex flex-col justify-end">
+                  <FormLabel
+                    htmlFor="priceRange"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Fourchette de prix (optionnel)
+                  </FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex space-x-2"
+                    >
+                      <FormItem className="flex items-center space-x-1 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="€" />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          €
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-1 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="€€" />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer w-4">
+                          €€
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-1 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="€€€" />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer w-6">
+                          €€€
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <DialogFooter className="mt-6">
             <Button

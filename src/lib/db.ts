@@ -1,4 +1,4 @@
-import { Place, PlaceType } from "@/types";
+import { Place, PlaceType, PriceRange } from "@/types";
 import { neon } from "@neondatabase/serverless";
 
 // Create a SQL client with the connection string
@@ -15,7 +15,10 @@ export async function initializeDatabase() {
         type TEXT NOT NULL,
         lat REAL NOT NULL,
         lng REAL NOT NULL,
-        address TEXT NOT NULL
+        address TEXT NOT NULL,
+        opening_time TEXT,
+        closing_time TEXT,
+        price_range TEXT
       )
     `;
 
@@ -59,6 +62,9 @@ export async function getPlaces(): Promise<Place[]> {
         lat: place.lat as number,
         lng: place.lng as number,
         address: place.address as string,
+        openingTime: place.opening_time as string | undefined,
+        closingTime: place.closing_time as string | undefined,
+        priceRange: place.price_range as PriceRange | undefined,
         tags: tags,
       });
     }
@@ -73,8 +79,8 @@ export async function getPlaces(): Promise<Place[]> {
 export async function addPlace(place: Place) {
   try {
     await sql`
-      INSERT INTO places (id, name, type, lat, lng, address)
-      VALUES (${place.id}, ${place.name}, ${place.type}, ${place.lat}, ${place.lng}, ${place.address})
+      INSERT INTO places (id, name, type, lat, lng, address, opening_time, closing_time, price_range)
+      VALUES (${place.id}, ${place.name}, ${place.type}, ${place.lat}, ${place.lng}, ${place.address}, ${place.openingTime}, ${place.closingTime}, ${place.priceRange})
     `;
 
     // Add tags if they exist
@@ -93,13 +99,16 @@ export async function addPlace(place: Place) {
 
 export async function updatePlace(place: Place) {
   try {
-    await sql`
+    await sql`  
       UPDATE places 
       SET name = ${place.name}, 
           type = ${place.type},
           lat = ${place.lat}, 
           lng = ${place.lng},
-          address = ${place.address}
+          address = ${place.address},
+          opening_time = ${place.openingTime},
+          closing_time = ${place.closingTime},
+          price_range = ${place.priceRange}
       WHERE id = ${place.id}
     `;
 

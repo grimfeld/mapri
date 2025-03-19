@@ -1,7 +1,7 @@
 import { Place } from "@/types";
 import { atom, computed } from "nanostores";
 import * as db from "@/lib/db";
-import { generateRandomId } from "@/utils/helpers";
+import { generateRandomId, calculateDistance } from "@/utils/helpers";
 
 /**
  * Error
@@ -67,12 +67,7 @@ export const addLocation = async (data: Omit<Place, "id">) => {
     // Add to database
     const success = await db.addPlace({
       id: generateRandomId(),
-      name: data.name,
-      type: data.type,
-      lat: data.lat,
-      lng: data.lng,
-      address: data.address,
-      tags: data.tags || [],
+      ...data,
     });
 
     if (success) {
@@ -116,15 +111,7 @@ export const updateLocation = async (data: Partial<Place>) => {
     };
 
     // Update in database
-    const success = await db.updatePlace({
-      id: updatedPlace.id,
-      name: updatedPlace.name,
-      type: updatedPlace.type,
-      lat: updatedPlace.lat,
-      lng: updatedPlace.lng,
-      address: updatedPlace.address,
-      tags: updatedPlace.tags || [],
-    });
+    const success = await db.updatePlace(updatedPlace);
 
     if (success) {
       loadLocations();
@@ -198,6 +185,24 @@ export const setTypeFilter = (type: string) => {
 };
 
 /**
+ * Show only open places filter
+ */
+export const $showOpenOnly = atom<boolean>(false);
+
+export const setShowOpenOnly = (value: boolean) => {
+  $showOpenOnly.set(value);
+};
+
+/**
+ * Sort by distance
+ */
+export const $sortByDistance = atom<boolean>(true);
+
+export const setSortByDistance = (value: boolean) => {
+  $sortByDistance.set(value);
+};
+
+/**
  * Tag filters
  */
 export const $tagFilters = atom<string[]>([]);
@@ -253,13 +258,56 @@ export const $availableTags = computed(
 );
 
 /**
+ * User location store
+ */
+export const $userLocation = atom<{ lat: number; lng: number } | null>(null);
+
+$userLocation.listen((location) => {
+  if (location) {
+    console.log("User location:", location);
+  }
+});
+
+export const setUserLocation = (
+  location: { lat: number; lng: number } | null
+) => {
+  $userLocation.set(location);
+};
+
+/**
+ * Price range filter
+ */
+export const $priceRangeFilter = atom<string | null>(null);
+
+export const setPriceRangeFilter = (priceRange: string | null) => {
+  $priceRangeFilter.set(priceRange);
+};
+
+/**
  * Filtered locations logic
  */
 
 export const $filteredLocations = computed(
-  [$locations, $typeFilter, $tagFilters],
-  (locations, typeFilter, tagFilters) => {
-    return locations.filter((location: Place) => {
+  [
+    $locations,
+    $typeFilter,
+    $tagFilters,
+    $showOpenOnly,
+    $userLocation,
+    $sortByDistance,
+    $priceRangeFilter,
+  ],
+  (
+    locations,
+    typeFilter,
+    tagFilters,
+    showOpenOnly,
+    userLocation,
+    sortByDistance,
+    priceRangeFilter
+  ) => {
+    // First, apply all filters
+    let filtered = locations.filter((location: Place) => {
       // Filter by type if specified
       if (typeFilter && location.type !== typeFilter) {
         return false;
@@ -281,7 +329,80 @@ export const $filteredLocations = computed(
         }
       }
 
+      // Filter by price range if specified
+      if (priceRangeFilter) {
+        // Always include locations without price range
+        if (!location.priceRange) {
+          // Pass the filter if no price range is defined
+        }
+        // "or less" rule: only check if location has a price range
+        else if (location.priceRange) {
+          // Compare by number of € symbols (length of the string)
+          if (location.priceRange.length > priceRangeFilter.length) {
+            return false; // Filter out if the price is higher than selected
+          }
+        }
+      }
+
+      // Filter by open status if enabled
+      if (showOpenOnly) {
+        if (!isLocationCurrentlyOpen(location)) {
+          return false;
+        }
+      }
+
       return true;
     });
+
+    // Then, apply sorting if needed
+    if (sortByDistance && userLocation) {
+      filtered = [...filtered].sort((a, b) => {
+        const distanceA = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          a.lat,
+          a.lng
+        );
+        const distanceB = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          b.lat,
+          b.lng
+        );
+        return distanceA - distanceB;
+      });
+    }
+
+    return filtered;
   }
 );
+
+/**
+ * Helper function to check if a location is currently open
+ */
+function isLocationCurrentlyOpen(location: Place): boolean {
+  // If opening or closing time is not set, can't determine if open
+  if (!location.openingTime || !location.closingTime) {
+    return true;
+  }
+
+  const now = new Date();
+  const currentHours = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const currentTimeString = `${currentHours
+    .toString()
+    .padStart(2, "0")}:${currentMinutes.toString().padStart(2, "0")}`;
+
+  // Parse opening and closing times to compare with current time
+  const openingTime = location.openingTime;
+  const closingTime = location.closingTime;
+
+  // Simple case: opening time is before closing time (e.g., 9:00 to 17:00)
+  if (openingTime <= closingTime) {
+    return currentTimeString >= openingTime && currentTimeString <= closingTime;
+  }
+  // Complex case: closing time is after midnight (e.g., 22:00 to 02:00)
+  else {
+    return currentTimeString >= openingTime || currentTimeString <= closingTime;
+  }
+}

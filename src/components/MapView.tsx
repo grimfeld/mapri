@@ -16,13 +16,18 @@ import {
   Landmark,
   MapPin,
   Tag,
+  Navigation,
+  CircleDollarSign,
+  Clock,
 } from "lucide-react";
 import ReactDOMServer from "react-dom/server";
 import {
   $filteredLocations,
   setCurrentLocation,
+  $userLocation,
 } from "@/store/locations.store";
 import { Badge } from "./ui/badge";
+import { calculateDistance, formatDistance } from "@/utils/helpers";
 
 // Add CSS styles for custom markers
 const markerStyles = `
@@ -170,53 +175,29 @@ const placeIcons: Record<PlaceType, L.DivIcon> = {
   }),
 };
 
-// User location component that uses the browser's geolocation API
+// User location component that uses the centralized user location from store
 function UserLocationMarker() {
-  const [position, setPosition] = useState<[number, number] | null>(null);
+  const userLocation = useStore($userLocation);
   const [accuracy, setAccuracy] = useState<number>(0);
-  const map = useMap();
 
   useEffect(() => {
-    let watchId: number;
-
-    // Request permission and start tracking
+    // Get accuracy from geolocation API once
     if (navigator.geolocation) {
-      // Get initial position and center map on it
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const { latitude, longitude, accuracy } = pos.coords;
-          setPosition([latitude, longitude]);
-          setAccuracy(accuracy);
+          setAccuracy(pos.coords.accuracy);
         },
         (error) => {
-          console.error("Error getting user location:", error);
+          console.error("Error getting user location accuracy:", error);
         },
         { enableHighAccuracy: true }
       );
-
-      // Watch position for changes
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude, accuracy } = pos.coords;
-          setPosition([latitude, longitude]);
-          setAccuracy(accuracy);
-        },
-        (error) => {
-          console.error("Error watching user location:", error);
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-      );
     }
+  }, []);
 
-    // Clean up on unmount
-    return () => {
-      if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
-  }, [map]);
+  if (!userLocation) return null;
 
-  if (!position) return null;
+  const position: [number, number] = [userLocation.lat, userLocation.lng];
 
   return (
     <>
@@ -263,9 +244,13 @@ function UserLocationMarker() {
 // Control to center map on user location
 function LocationButton() {
   const map = useMap();
+  const userLocation = useStore($userLocation);
 
   const centerOnLocation = () => {
-    if (navigator.geolocation) {
+    if (userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], 15);
+    } else if (navigator.geolocation) {
+      // Fallback to geolocation API if userLocation is not available
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
@@ -309,9 +294,10 @@ function LocationButton() {
 
 export default function MapView() {
   const locations = useStore($filteredLocations);
+  const userLocation = useStore($userLocation);
 
   return (
-    <div className="h-full flex flex-col relative">
+    <div className="h-full grow flex flex-col relative">
       <div className="flex-1 relative overflow-hidden z-10 rounded-xl shadow-sm">
         <MapContainer
           center={PARIS_COORDS}
@@ -365,6 +351,38 @@ export default function MapView() {
                       {placeTypeLabels[place.type]}
                     </span>
                   </div>
+
+                  {place.priceRange && (
+                    <div className="flex items-center mt-2 text-sm text-gray-500">
+                      <CircleDollarSign className="h-4 w-4 mr-1" />
+                      <span>{place.priceRange}</span>
+                    </div>
+                  )}
+
+                  {place.openingTime && place.closingTime && (
+                    <div className="flex items-center mt-2 text-sm text-gray-500">
+                      <Clock className="h-4 w-4 mr-1" />
+                      <span>
+                        {place.openingTime} - {place.closingTime}
+                      </span>
+                    </div>
+                  )}
+
+                  {userLocation && (
+                    <div className="flex items-center mt-2 text-sm text-gray-500">
+                      <Navigation className="h-4 w-4 mr-1" />
+                      <span>
+                        {formatDistance(
+                          calculateDistance(
+                            userLocation.lat,
+                            userLocation.lng,
+                            place.lat,
+                            place.lng
+                          )
+                        )}
+                      </span>
+                    </div>
+                  )}
                   {place.tags && place.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       <div className="flex items-center text-gray-500 text-xs">

@@ -6,6 +6,8 @@ export type PlaceType =
   | "attraction"
   | "other";
 
+export type PriceRange = "€" | "€€" | "€€€";
+
 // Translation map for place types
 export const placeTypeLabels: Record<PlaceType, string> = {
   restaurant: "Restaurant",
@@ -39,6 +41,9 @@ export interface Place {
   lng: number;
   address: string;
   tags?: Tag[];
+  openingTime?: string;
+  closingTime?: string;
+  priceRange?: PriceRange;
 }
 
 export interface MapState {

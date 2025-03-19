@@ -10,20 +10,41 @@ import {
   $availableTags,
   $tagFilters,
   $typeFilter,
+  $showOpenOnly,
+  $sortByDistance,
+  $userLocation,
+  $priceRangeFilter,
   clearTagFilters,
   toggleTagFilter,
   setTypeFilter,
+  setShowOpenOnly,
+  setSortByDistance,
+  setPriceRangeFilter,
 } from "@/store/locations.store";
 import { placeTypeLabels } from "@/types";
 import { useStore } from "@nanostores/react";
-import { Check, Tag, X } from "lucide-react";
+import {
+  Check,
+  Tag,
+  X,
+  Clock,
+  Navigation,
+  CircleDollarSign,
+} from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
+import { Separator } from "./ui/separator";
 
 export default function FiltersBar() {
   const availableTags = useStore($availableTags);
   const selectedTags = useStore($tagFilters);
   const typeFilter = useStore($typeFilter);
+  const showOpenOnly = useStore($showOpenOnly);
+  const sortByDistance = useStore($sortByDistance);
+  const userLocation = useStore($userLocation);
+  const priceRangeFilter = useStore($priceRangeFilter);
 
   const handleTypeFilterChange = (value: string) => {
     // If we're changing type filter, clear tag filters to avoid confusion
@@ -40,18 +61,30 @@ export default function FiltersBar() {
     toggleTagFilter(tag);
   };
 
+  const handleShowOpenChange = (checked: boolean) => {
+    setShowOpenOnly(checked);
+  };
+
+  const handleSortByDistanceChange = (checked: boolean) => {
+    setSortByDistance(checked);
+  };
+
+  const handlePriceRangeChange = (value: string) => {
+    setPriceRangeFilter(value === "all" ? null : value);
+  };
+
   const showTags = typeFilter !== "" && availableTags.length > 0;
 
   return (
-    <Card className="py-4">
-      <CardContent className="flex space-x-2 items-center flex-wrap gap-2">
-        <h2 className="text-lg font-bold">Filtres</h2>
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        <h2 className="font-bold">Filtres</h2>
         <Select
           defaultValue="all"
           value={typeFilter || "all"}
           onValueChange={handleTypeFilterChange}
         >
-          <SelectTrigger className="min-w-32 grow">
+          <SelectTrigger className="min-w-32 w-full">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
@@ -63,6 +96,64 @@ export default function FiltersBar() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Price Range Filter */}
+        <div className="flex gap-2">
+          <div className="flex items-center">
+            <CircleDollarSign className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Prix:</span>
+          </div>
+          <Select
+            value={priceRangeFilter || "all"}
+            onValueChange={handlePriceRangeChange}
+          >
+            <SelectTrigger className="min-w-32 grow">
+              <SelectValue placeholder="Prix" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="€">€</SelectItem>
+              <SelectItem value="€€">€€</SelectItem>
+              <SelectItem value="€€€">€€€</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Separator className="my-1" />
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="showOpen"
+              checked={showOpenOnly}
+              onCheckedChange={handleShowOpenChange}
+            />
+            <Label
+              htmlFor="showOpen"
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Clock className="h-4 w-4" />
+              <span>Lieux ouverts</span>
+            </Label>
+          </div>
+
+          {userLocation && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="sortByDistance"
+                checked={sortByDistance}
+                onCheckedChange={handleSortByDistanceChange}
+              />
+              <Label
+                htmlFor="sortByDistance"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Navigation className="h-4 w-4" />
+                <span>Trier par distance</span>
+              </Label>
+            </div>
+          )}
+        </div>
 
         {showTags ? (
           <div className="flex flex-wrap gap-2 items-center mt-2 md:mt-0 w-full">

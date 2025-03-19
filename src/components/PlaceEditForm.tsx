@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useStore } from "@nanostores/react";
-import { PlaceType, placeTypeLabels, Tag } from "../types";
+import { PlaceType, placeTypeLabels, Tag, PriceRange } from "../types";
 import {
   updateLocation,
   deleteLocation,
@@ -25,6 +25,8 @@ import {
 } from "./ui/dialog";
 import { Badge } from "./ui/badge";
 import { generateRandomId } from "@/utils/helpers";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Label } from "./ui/label";
 
 interface Props {
   onClose?: () => void;
@@ -38,6 +40,15 @@ export default function PlaceEditForm({ onClose }: Props) {
     currentLocation?.type || "restaurant"
   );
   const [tags, setTags] = useState<Tag[]>(currentLocation?.tags || []);
+  const [openingTime, setOpeningTime] = useState<string | undefined>(
+    currentLocation?.openingTime
+  );
+  const [closingTime, setClosingTime] = useState<string | undefined>(
+    currentLocation?.closingTime
+  );
+  const [priceRange, setPriceRange] = useState<PriceRange | undefined>(
+    currentLocation?.priceRange
+  );
   const [newTag, setNewTag] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +59,9 @@ export default function PlaceEditForm({ onClose }: Props) {
       setName(currentLocation.name);
       setType(currentLocation.type);
       setTags(currentLocation.tags || []);
+      setOpeningTime(currentLocation.openingTime);
+      setClosingTime(currentLocation.closingTime);
+      setPriceRange(currentLocation.priceRange);
     }
   }, [currentLocation]);
 
@@ -72,6 +86,9 @@ export default function PlaceEditForm({ onClose }: Props) {
         name: name.trim(),
         type,
         tags,
+        openingTime,
+        closingTime,
+        priceRange,
       });
       if (onClose) onClose();
     } catch (err) {
@@ -155,12 +172,10 @@ export default function PlaceEditForm({ onClose }: Props) {
         </label>
         <Input
           id="name"
-          type="text"
-          placeholder="Nom du lieu"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          required
           className="w-full"
+          placeholder="Nom du lieu"
         />
       </div>
 
@@ -176,17 +191,88 @@ export default function PlaceEditForm({ onClose }: Props) {
           value={type}
           onValueChange={(value) => setType(value as PlaceType)}
         >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Sélectionnez un type" />
+          <SelectTrigger id="type">
+            <SelectValue placeholder="Type de lieu" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(placeTypeLabels).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
+            {Object.entries(placeTypeLabels).map(([type, label]) => (
+              <SelectItem key={type} value={type}>
                 {label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Opening & Closing Time fields */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label
+            htmlFor="openingTime"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Heure d'ouverture
+          </label>
+          <Input
+            id="openingTime"
+            type="time"
+            value={openingTime || ""}
+            onChange={(e) => setOpeningTime(e.target.value || undefined)}
+            className="w-full"
+            placeholder="Heure d'ouverture"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="closingTime"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Heure de fermeture
+          </label>
+          <Input
+            id="closingTime"
+            type="time"
+            value={closingTime || ""}
+            onChange={(e) => setClosingTime(e.target.value || undefined)}
+            className="w-full"
+            placeholder="Heure de fermeture"
+          />
+        </div>
+      </div>
+
+      {/* Price Range field */}
+      <div className="flex flex-col justify-end">
+        <label
+          htmlFor="priceRange"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Fourchette de prix (optionnel)
+        </label>
+        <RadioGroup
+          value={priceRange}
+          onValueChange={(value: PriceRange) => setPriceRange(value)}
+          className="flex space-x-2"
+        >
+          <div className="flex items-center space-x-1">
+            <RadioGroupItem id="price-€" value="€" />
+            <Label htmlFor="price-€" className="font-normal cursor-pointer">
+              €
+            </Label>
+          </div>
+          <div className="flex items-center space-x-1">
+            <RadioGroupItem id="price-€€" value="€€" />
+            <Label htmlFor="price-€€" className="font-normal cursor-pointer">
+              €€
+            </Label>
+          </div>
+          <div className="flex items-center space-x-1">
+            <RadioGroupItem id="price-€€€" value="€€€" />
+            <Label htmlFor="price-€€€" className="font-normal cursor-pointer">
+              €€€
+            </Label>
+          </div>
+        </RadioGroup>
       </div>
 
       {/* Tags field */}
