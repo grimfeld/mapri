@@ -10,16 +10,28 @@ import PlaceForm from "./PlaceForm";
 import { Button } from "./ui/button";
 import { initializeStore } from "@/store/locations.store";
 import UserLocationProvider from "./UserLocationProvider";
+import { useStore } from "@nanostores/react";
+import { $currentUser, hasUsername } from "@/store/user.store";
+import ProfileSelectionDialog from "./ProfileSelectionDialog";
 
 export default function AppLayout() {
   const [activeTab, setActiveTab] = useState("list");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const currentUser = useStore($currentUser);
 
   // Initialize store
   useEffect(() => {
     initializeStore().then(() => setIsLoading(false));
   }, []);
+
+  // Check if user has set a username
+  useEffect(() => {
+    if (!isLoading && !hasUsername()) {
+      setShowProfileDialog(true);
+    }
+  }, [isLoading, currentUser.username]);
 
   if (isLoading) {
     return (
@@ -82,6 +94,12 @@ export default function AppLayout() {
           </DialogContent>
         </Dialog>
       </Tabs>
+
+      {/* Profile Selection Dialog */}
+      <ProfileSelectionDialog
+        open={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
+      />
     </div>
   );
 }

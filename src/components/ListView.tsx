@@ -13,6 +13,7 @@ import { Badge } from "./ui/badge";
 import { useState } from "react";
 import { calculateDistance, formatDistance } from "@/utils/helpers";
 import { ScrollArea } from "./ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 export default function ListView() {
   const places = useStore($filteredLocations);
@@ -68,6 +69,23 @@ export default function ListView() {
                         {placeTypeLabels[place.type]}
                       </span>
                     </div>
+
+                    {place.username && (
+                      <div className="flex items-center gap-2 mt-1 mb-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage
+                            src={place.avatarUrl}
+                            alt={place.username}
+                          />
+                          <AvatarFallback>
+                            {place.username[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-gray-500">
+                          Ajouté par {place.username}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex items-center mt-2 text-xs text-gray-500">
                       <MapPin className="h-3 w-3 mr-1" />

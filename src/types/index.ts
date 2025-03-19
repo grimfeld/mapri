@@ -44,6 +44,8 @@ export interface Place {
   openingTime?: string;
   closingTime?: string;
   priceRange?: PriceRange;
+  username?: string;
+  avatarUrl?: string;
 }
 
 export interface MapState {

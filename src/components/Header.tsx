@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import UserProfile from "./UserProfile";
 
 export default function Header() {
   return (
@@ -8,6 +9,7 @@ export default function Header() {
           <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
           <h1 className="text-lg sm:text-xl font-bold text-gray-900">MapRi</h1>
         </div>
+        <UserProfile />
       </div>
     </header>
   );

@@ -18,7 +18,9 @@ export async function initializeDatabase() {
         address TEXT NOT NULL,
         opening_time TEXT,
         closing_time TEXT,
-        price_range TEXT
+        price_range TEXT,
+        username TEXT,
+        avatar_url TEXT
       )
     `;
 
@@ -38,6 +40,15 @@ export async function initializeDatabase() {
         PRIMARY KEY (location_id, tag_id),
         FOREIGN KEY (location_id) REFERENCES places(id) ON DELETE CASCADE,
         FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    `;
+
+    // Create the users table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        username TEXT PRIMARY KEY,
+        avatar_url TEXT NOT NULL,
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
 
@@ -65,6 +76,8 @@ export async function getPlaces(): Promise<Place[]> {
         openingTime: place.opening_time as string | undefined,
         closingTime: place.closing_time as string | undefined,
         priceRange: place.price_range as PriceRange | undefined,
+        username: place.username as string | undefined,
+        avatarUrl: place.avatar_url as string | undefined,
         tags: tags,
       });
     }
@@ -79,8 +92,8 @@ export async function getPlaces(): Promise<Place[]> {
 export async function addPlace(place: Place) {
   try {
     await sql`
-      INSERT INTO places (id, name, type, lat, lng, address, opening_time, closing_time, price_range)
-      VALUES (${place.id}, ${place.name}, ${place.type}, ${place.lat}, ${place.lng}, ${place.address}, ${place.openingTime}, ${place.closingTime}, ${place.priceRange})
+      INSERT INTO places (id, name, type, lat, lng, address, opening_time, closing_time, price_range, username, avatar_url)
+      VALUES (${place.id}, ${place.name}, ${place.type}, ${place.lat}, ${place.lng}, ${place.address}, ${place.openingTime}, ${place.closingTime}, ${place.priceRange}, ${place.username}, ${place.avatarUrl})
     `;
 
     // Add tags if they exist
@@ -108,7 +121,9 @@ export async function updatePlace(place: Place) {
           address = ${place.address},
           opening_time = ${place.openingTime},
           closing_time = ${place.closingTime},
-          price_range = ${place.priceRange}
+          price_range = ${place.priceRange},
+          username = ${place.username},
+          avatar_url = ${place.avatarUrl}
       WHERE id = ${place.id}
     `;
 
@@ -213,6 +228,38 @@ export async function removeAllTagsFromLocation(locationId: string) {
     return true;
   } catch (error) {
     console.error(`Error removing tags from location ${locationId}:`, error);
+    return false;
+  }
+}
+
+// User functions
+export async function getUsers() {
+  try {
+    const users = await sql`SELECT * FROM users ORDER BY last_active DESC`;
+    return users.map((user) => ({
+      username: user.username,
+      avatarUrl: user.avatar_url,
+    }));
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return [];
+  }
+}
+
+export async function saveUser(username: string, avatarUrl: string) {
+  try {
+    // Upsert: insert if doesn't exist, update if exists
+    await sql`
+      INSERT INTO users (username, avatar_url, last_active) 
+      VALUES (${username}, ${avatarUrl}, CURRENT_TIMESTAMP)
+      ON CONFLICT (username) 
+      DO UPDATE SET 
+        avatar_url = ${avatarUrl},
+        last_active = CURRENT_TIMESTAMP
+    `;
+    return true;
+  } catch (error) {
+    console.error("Error saving user:", error);
     return false;
   }
 }

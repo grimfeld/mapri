@@ -18,6 +18,7 @@ import {
   $selectedLocation,
   setSelectedLocation,
 } from "@/store/locations.store";
+import { $currentUser } from "@/store/user.store";
 import {
   Form,
   FormControl,
@@ -52,6 +53,7 @@ export default function PlaceForm({ onClose }: Props) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [newTag, setNewTag] = useState<string>("");
   const selectedLocation = useStore($selectedLocation);
+  const currentUser = useStore($currentUser);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,6 +73,13 @@ export default function PlaceForm({ onClose }: Props) {
         return;
       }
 
+      if (!currentUser.username) {
+        setError(
+          "Veuillez définir votre nom d'utilisateur avant d'ajouter un lieu"
+        );
+        return;
+      }
+
       await addLocation({
         name: data.name,
         type: data.type,
@@ -81,6 +90,8 @@ export default function PlaceForm({ onClose }: Props) {
         openingTime: data.openingTime || undefined,
         closingTime: data.closingTime || undefined,
         priceRange: data.priceRange,
+        username: currentUser.username,
+        avatarUrl: currentUser.avatarUrl,
       });
 
       // Reset form
