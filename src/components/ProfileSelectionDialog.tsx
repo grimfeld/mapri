@@ -151,6 +151,7 @@ export default function ProfileSelectionDialog({
                       <AvatarImage
                         src={user.profilePhoto || user.avatarUrl}
                         alt={user.username}
+                        className="object-cover"
                       />
                       <AvatarFallback>
                         {getInitials(user.username)}
@@ -207,6 +208,7 @@ export default function ProfileSelectionDialog({
                     <AvatarImage
                       src={avatarUrl}
                       alt={`Avatar option ${index + 1}`}
+                      className="object-cover"
                     />
                   </Avatar>
                 ))}

@@ -331,6 +331,7 @@ export default function LocationDetailsDialog({
                   <AvatarImage
                     src={location.avatarUrl}
                     alt={location.username}
+                    className="object-cover"
                   />
                   <AvatarFallback>
                     {location.username[0].toUpperCase()}
@@ -379,6 +380,7 @@ export default function LocationDetailsDialog({
                     <AvatarImage
                       src={currentUser.profilePhoto || currentUser.avatarUrl}
                       alt={currentUser.username}
+                      className="object-cover"
                     />
                     <AvatarFallback>
                       {currentUser.username[0]?.toUpperCase() || "U"}
@@ -416,6 +418,7 @@ export default function LocationDetailsDialog({
                         <AvatarImage
                           src={comment.avatarUrl}
                           alt={comment.username}
+                          className="object-cover"
                         />
                         <AvatarFallback>
                           {comment.username[0].toUpperCase()}

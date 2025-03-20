@@ -88,6 +88,7 @@ export default function ListView() {
                           <AvatarImage
                             src={place.avatarUrl}
                             alt={place.username}
+                            className="object-cover"
                           />
                           <AvatarFallback>
                             {place.username[0].toUpperCase()}

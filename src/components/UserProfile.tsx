@@ -175,6 +175,7 @@ export default function UserProfile() {
                       <AvatarImage
                         src={avatarUrl}
                         alt={`Avatar option ${index + 1}`}
+                        className="object-cover"
                       />
                     </Avatar>
                   ))}
