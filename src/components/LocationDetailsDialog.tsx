@@ -160,8 +160,6 @@ export default function LocationDetailsDialog({
 
   if (!location) return null;
 
-  const maxPhotos = location.photos ? location.photos.length >= 3 : false;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -185,7 +183,7 @@ export default function LocationDetailsDialog({
             {location.photos && location.photos.length > 0 ? (
               <div className="space-y-2">
                 <LocationPhotos photos={location.photos} />
-                {!maxPhotos && currentUser.username && (
+                {currentUser.username && (
                   <>
                     {showPhotoUpload ? (
                       <div className="mt-4">
