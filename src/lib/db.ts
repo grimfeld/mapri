@@ -286,6 +286,30 @@ export async function saveUser(
   }
 }
 
+export async function getUserByUsername(username: string) {
+  try {
+    const users = await sql`
+      SELECT * FROM users
+      WHERE username = ${username}
+      LIMIT 1
+    `;
+
+    if (users.length === 0) {
+      return null;
+    }
+
+    const user = users[0];
+    return {
+      username: user.username as string,
+      avatarUrl: user.avatar_url as string,
+      profilePhoto: user.profile_photo as string | undefined,
+    };
+  } catch (error) {
+    console.error(`Error fetching user ${username}:`, error);
+    return null;
+  }
+}
+
 // Comment functions
 export async function getCommentsByLocationId(locationId: string) {
   try {

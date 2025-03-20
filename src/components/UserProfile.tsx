@@ -23,6 +23,7 @@ import { uploadProfileImage } from "@/lib/firebase";
 
 export default function UserProfile() {
   const currentUser = useStore($currentUser);
+  console.log(currentUser);
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState(currentUser.username);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(
@@ -106,6 +107,7 @@ export default function UserProfile() {
               <AvatarImage
                 src={currentUser.profilePhoto || currentUser.avatarUrl}
                 alt={currentUser.username || "User"}
+                className="object-cover"
               />
               <AvatarFallback>{getInitials()}</AvatarFallback>
             </Avatar>
