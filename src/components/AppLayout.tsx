@@ -11,7 +11,7 @@ import { Button } from "./ui/button";
 import { initializeStore } from "@/store/locations.store";
 import UserLocationProvider from "./UserLocationProvider";
 import { useStore } from "@nanostores/react";
-import { $currentUser, hasUsername } from "@/store/user.store";
+import { $currentUser, hasUsername, initializeUser } from "@/store/user.store";
 import ProfileSelectionDialog from "./ProfileSelectionDialog";
 
 export default function AppLayout() {
@@ -23,7 +23,12 @@ export default function AppLayout() {
 
   // Initialize store
   useEffect(() => {
-    initializeStore().then(() => setIsLoading(false));
+    const init = async () => {
+      await Promise.all([initializeStore(), initializeUser()]);
+      setIsLoading(false);
+    };
+
+    init();
   }, []);
 
   // Check if user has set a username

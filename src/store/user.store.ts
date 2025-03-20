@@ -5,7 +5,7 @@ import { showSuccessToast, showErrorToast } from "@/utils/toast";
 import { User } from "@/types";
 
 // Local storage keys
-const USER_STORAGE_KEY = "mapri_user";
+const USER_STORAGE_KEY = "mapri_username";
 
 // Default state
 const DEFAULT_USER: User = {
@@ -14,15 +14,27 @@ const DEFAULT_USER: User = {
   profilePhoto: undefined,
 };
 
-// Load user from localStorage if exists
-const loadUserFromStorage = (): User => {
+// Load user from localStorage and database if exists
+const loadUserFromStorage = async (): Promise<User> => {
   if (typeof window !== "undefined") {
-    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-    if (storedUser) {
+    const storedUsername = localStorage.getItem(USER_STORAGE_KEY);
+    if (storedUsername) {
       try {
-        return JSON.parse(storedUser);
+        // If we have a username, try to load user data from database
+        const userData = await db.getUserByUsername(storedUsername);
+        if (userData) {
+          return userData;
+        } else {
+          // If user not found in DB but username exists in localStorage
+          // Create a default user with the stored username
+          return {
+            username: storedUsername,
+            avatarUrl: getRandomAvatarUrl(),
+            profilePhoto: undefined,
+          };
+        }
       } catch (e) {
-        console.error("Error parsing stored user:", e);
+        console.error("Error loading user from database:", e);
       }
     }
   }
@@ -30,16 +42,24 @@ const loadUserFromStorage = (): User => {
 };
 
 // User store
-export const $currentUser = atom<User>(loadUserFromStorage());
+export const $currentUser = atom<User>(DEFAULT_USER);
+
+// Initialize the user store
+export const initializeUser = async () => {
+  if (typeof window !== "undefined") {
+    const user = await loadUserFromStorage();
+    $currentUser.set(user);
+  }
+};
 
 // Update user information
 export const updateUser = async (user: User) => {
   // Update store
   $currentUser.set(user);
 
-  // Save to localStorage
+  // Save only username to localStorage
   if (typeof window !== "undefined") {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(USER_STORAGE_KEY, user.username);
   }
 
   // Save to database if username is set
